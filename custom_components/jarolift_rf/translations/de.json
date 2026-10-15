@@ -3,6 +3,38 @@
     "step": {
       "user": {
         "title": "Jarolift RF",
+        "description": "Neue Installation einrichten oder einen bestehenden ESP32-Jarolift-Controller übernehmen.",
+        "menu_options": {
+          "manual": "Neu einrichten",
+          "import_config": "Von ESP32-Jarolift-Controller übernehmen (config.json)"
+        }
+      },
+      "manual": {
+        "title": "Neu einrichten",
+        "description": "Jarolift-Master-Schlüssel eingeben. Seriennummer leer lassen, um eine neue zu erzeugen; dann muss jeder Motor angelernt werden (Button oder Aktion „Anlernen“).",
+        "data": {
+          "bridge_service": "Funkbrücke (ESPHome-Aktion)",
+          "master_msb": "Master-Schlüssel MSB",
+          "master_lsb": "Master-Schlüssel LSB",
+          "base_serial": "Basis-Seriennummer",
+          "channel_names": "Rollläden (optional)",
+          "counter_start": "Startwert Zähler",
+          "legacy_learn": "Legacy-Lernmodus",
+          "tx_enabled": "Senden aktiv"
+        },
+        "data_description": {
+          "bridge_service": "ESPHome-Gerät mit dem jarolift-bridge-Paket (Aktion GERÄTENAME_send_raw).",
+          "master_msb": "Dezimal oder hexadezimal mit 0x.",
+          "master_lsb": "Dezimal oder hexadezimal mit 0x.",
+          "base_serial": "Optional. 20 Bit (max. 0xFFFFF). Leer = neue Seriennummer erzeugen.",
+          "channel_names": "Ein Name pro Zeile; Zeile 1 = Kanal 1. Weitere Kanäle lassen sich später hinzufügen.",
+          "counter_start": "1 bei neuer Seriennummer. Bei übernommener Seriennummer: letzter Zählerstand des alten Senders + 16.",
+          "legacy_learn": "Nur für sehr alte Empfänger. Der alte Controller nutzte immer den neuen Modus.",
+          "tx_enabled": "Für einen ersten Test nur mit Empfang ausgeschaltet lassen. Solange aus, wird nichts gesendet."
+        }
+      },
+      "import_config": {
+        "title": "Von ESP32-Jarolift-Controller übernehmen (config.json)",
         "description": "Füge die config.json des alten ESP32-Jarolift-Controllers ein, um Schlüssel, Seriennummer, Kanäle und Gruppen zu übernehmen, oder gib Schlüssel und Seriennummer von Hand ein. Schlüssel werden nur in Home Assistant gespeichert und nie protokolliert.",
         "data": {
           "bridge_service": "Funkbrücke (ESPHome-Aktion)",
@@ -11,6 +43,7 @@
           "master_lsb": "Master-Schlüssel LSB",
           "base_serial": "Basis-Seriennummer",
           "counter_start": "Startwert Zähler",
+          "legacy_learn": "Legacy-Lernmodus",
           "tx_enabled": "Senden aktiv"
         },
         "data_description": {
@@ -20,12 +53,13 @@
           "master_lsb": "Dezimal oder hexadezimal mit 0x. Leer lassen, um den Wert aus der config.json zu nehmen.",
           "base_serial": "20 Bit (max. 0xFFFFF). Dezimal oder 0x… Leer lassen, um den Wert aus der config.json zu nehmen.",
           "counter_start": "Gerätezähler des alten Controllers + 16 (Sicherheitsaufschlag). Lässt sich später nur vorwärts verstellen.",
+          "legacy_learn": "Nur für sehr alte Empfänger. Der alte Controller nutzte immer den neuen Modus.",
           "tx_enabled": "Für einen ersten Test nur mit Empfang ausgeschaltet lassen. Solange aus, wird nichts gesendet."
         }
       },
       "import_summary": {
         "title": "Import aus config.json",
-        "description": "Kanäle:\n{channels}\n\nGruppen:\n{groups}\n\nGruppen ohne Kanäle im alten Controller (Maske 0); Mitglieder aus den Kanalnamen abgeleitet, bitte prüfen:\n{derived}"
+        "description": "Kanäle:\n{channels}\n\nGruppen:\n{groups}\n\nGruppen ohne Kanäle im alten Controller (Maske 0, sie haben nie etwas bewegt). Mitglieder aus Kanalnamen der Form \"GRUPPE - NAME\" vorgeschlagen; prüfen und ggf. später anpassen:\n{derived}"
       }
     },
     "error": {
@@ -119,12 +153,129 @@
     "button": {
       "shade": {
         "name": "Schattenposition"
+      },
+      "learn": {
+        "name": "Anlernen"
+      },
+      "unlearn": {
+        "name": "Ablernen"
+      },
+      "set_shade": {
+        "name": "Schattenposition speichern"
+      },
+      "set_endpoint_up": {
+        "name": "Endpunkt oben setzen"
+      },
+      "delete_endpoint_up": {
+        "name": "Endpunkt oben löschen"
+      },
+      "set_endpoint_down": {
+        "name": "Endpunkt unten setzen"
+      },
+      "delete_endpoint_down": {
+        "name": "Endpunkt unten löschen"
       }
     },
     "sensor": {
       "next_counter": {
         "name": "Nächster Zählerwert"
       }
+    }
+  },
+  "services": {
+    "learn": {
+      "name": "Anlernen",
+      "description": "Diesen Kanal an einem Motor im Lernmodus anlernen.",
+      "fields": {
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Muss eingeschaltet sein."
+        }
+      }
+    },
+    "unlearn": {
+      "name": "Ablernen",
+      "description": "Diesen Kanal vom Motor entfernen.",
+      "fields": {
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Muss eingeschaltet sein."
+        }
+      }
+    },
+    "set_endpoint": {
+      "name": "Endpunkt setzen",
+      "description": "Aktuelle Position als oberen oder unteren Endpunkt speichern.",
+      "fields": {
+        "position": {
+          "name": "Endpunkt",
+          "description": "Oben oder unten."
+        },
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Muss eingeschaltet sein."
+        }
+      }
+    },
+    "delete_endpoint": {
+      "name": "Endpunkt löschen",
+      "description": "Oberen oder unteren Endpunkt löschen.",
+      "fields": {
+        "position": {
+          "name": "Endpunkt",
+          "description": "Oben oder unten."
+        },
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Muss eingeschaltet sein."
+        }
+      }
+    },
+    "set_shade": {
+      "name": "Schattenposition speichern",
+      "description": "Aktuelle Position als Schattenposition speichern.",
+      "fields": {}
+    },
+    "shade": {
+      "name": "Schattenposition anfahren",
+      "description": "Kanäle oder Gruppen in die gespeicherte Schattenposition fahren.",
+      "fields": {}
+    },
+    "set_counter": {
+      "name": "Zähler setzen",
+      "description": "Rolling-Code-Zähler vorstellen (nie zurück).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Integrationseintrag",
+          "description": "Jarolift-RF-Eintrag."
+        },
+        "value": {
+          "name": "Nächster Wert",
+          "description": "Nächster zu sendender Zählerwert."
+        },
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Muss eingeschaltet sein."
+        }
+      }
+    }
+  },
+  "selector": {
+    "position": {
+      "options": {
+        "up": "Oben",
+        "down": "Unten"
+      }
+    }
+  },
+  "issues": {
+    "counter_high": {
+      "title": "Jarolift-Zähler fast erschöpft",
+      "description": "Der nächste Rolling-Code-Zählerwert ist {next} von 65535. Vor dem Ende eine neue Seriennummer einrichten und alle Motoren neu anlernen."
+    },
+    "entity_id_blocked": {
+      "title": "Alte Entitäten blockieren Jarolift-Entitäts-IDs",
+      "description": "Diese Entitäts-IDs werden noch von anderen Entitäten belegt (meist vom alten MQTT-Controller):\n{entities}\n\nAltes MQTT-Gerät (und seine retained Discovery-Topics) entfernen, dann Jarolift RF neu laden. Die IDs werden automatisch übernommen."
     }
   },
   "exceptions": {
@@ -154,6 +305,18 @@
     },
     "command_too_old": {
       "message": "Befehl verworfen: zu lange in der Warteschlange."
+    },
+    "channel_required": {
+      "message": "{entity_id} ist eine Gruppe; diese Aktion braucht einzelne Kanäle."
+    },
+    "no_target": {
+      "message": "Kein Jarolift-RF-Rollladen ausgewählt."
+    },
+    "entry_not_loaded": {
+      "message": "Jarolift-RF-Eintrag nicht gefunden oder nicht geladen."
+    },
+    "counter_backwards": {
+      "message": "Der Zähler kann nur vorwärts gestellt werden (aktuell: {current})."
     }
   }
 }

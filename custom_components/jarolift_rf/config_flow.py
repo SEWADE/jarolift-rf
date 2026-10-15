@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import secrets
 from typing import Any
 
 import voluptuous as vol
@@ -26,6 +27,7 @@ from .const import (
     CONF_BASE_SERIAL,
     CONF_BRIDGE_SERVICE,
     CONF_CHANNEL,
+    CONF_CHANNEL_NAMES,
     CONF_CHANNELS,
     CONF_CONFIG_JSON,
     CONF_COUNTER_START,
@@ -81,7 +83,8 @@ def parse_original_config(text: str) -> dict[str, Any]:
         members = [n for n in range(1, NUM_CHANNELS + 1) if mask & (1 << (n - 1))]
         derived = False
         if not members:
-            # mask 0 never moved anything; derive members from "<group> - <shutter>" names
+            # Mask 0 addresses no motor. If the channel names follow "<group> - <name>",
+            # suggest those channels; the user confirms in the import summary.
             members = [n for n, cname in channels if cname.lower().startswith(name.lower())]
             derived = True
         if members:
@@ -93,6 +96,12 @@ def parse_original_config(text: str) -> dict[str, Any]:
         "channels": channels,
         "groups": groups,
     }
+
+
+def parse_channel_lines(text: str) -> list[tuple[int, str]]:
+    """One shutter name per line -> channels 1..n (empty lines skip a channel number)."""
+    lines = text.splitlines() if text.strip() else []
+    return [(i + 1, line.strip()) for i, line in enumerate(lines[:NUM_CHANNELS]) if line.strip()]
 
 
 class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -115,17 +124,32 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
         return {SUBENTRY_CHANNEL: ChannelSubentryFlow, SUBENTRY_GROUP: GroupSubentryFlow}
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if not find_esphome_bridges(self.hass):
+            return self.async_abort(reason="no_bridge")
+        return self.async_show_menu(step_id="user", menu_options=["manual", "import_config"])
+
+    async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """New installation: keys by hand, serial by hand or generated, channels optional."""
+        return await self._async_step_setup("manual", user_input)
+
+    async def async_step_import_config(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Take over an existing ESP32-Jarolift-Controller via its config.json."""
+        return await self._async_step_setup("import_config", user_input)
+
+    async def _async_step_setup(self, step_id: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
         bridges = find_esphome_bridges(self.hass)
         if not bridges:
             return self.async_abort(reason="no_bridge")
         errors: dict[str, str] = {}
         if user_input is not None:
             imported: dict[str, Any] = {}
-            if text := user_input.get(CONF_CONFIG_JSON, "").strip():
+            if step_id == "import_config":
                 try:
-                    imported = parse_original_config(text)
+                    imported = parse_original_config(user_input.get(CONF_CONFIG_JSON, ""))
                 except (ValueError, KeyError, TypeError, IndexError):
                     errors[CONF_CONFIG_JSON] = "invalid_config_json"
+            else:
+                imported = {"channels": parse_channel_lines(user_input.get(CONF_CHANNEL_NAMES, ""))}
             values: dict[str, int] = {}
             for key, maximum in (
                 (CONF_MASTER_MSB, 0xFFFFFFFF),
@@ -134,7 +158,10 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
             ):
                 raw = user_input.get(key) or imported.get(key)
                 if raw in (None, ""):
-                    errors[key] = "required"
+                    if key == CONF_BASE_SERIAL and step_id == "manual":
+                        values[key] = secrets.randbelow(MAX_BASE_SERIAL) + 1  # new installation
+                        continue
+                    errors.setdefault(key, "required")
                     continue
                 try:
                     values[key] = parse_int(raw, maximum)
@@ -154,31 +181,36 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
                     OPT_TX_ENABLED: user_input.get(OPT_TX_ENABLED, False),
                     OPT_TX_POWER: DEFAULT_TX_POWER,
                     OPT_BUNDLE_MS: DEFAULT_BUNDLE_MS,
-                    OPT_LEGACY_LEARN: False,
+                    OPT_LEGACY_LEARN: user_input.get(OPT_LEGACY_LEARN, False),
                 }
                 self._build_import(imported)
-                if self._subentries:
+                if step_id == "import_config":
                     return await self.async_step_import_summary()
                 return self._create()
 
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_BRIDGE_SERVICE, default=bridges[0]): selector.SelectSelector(
-                    selector.SelectSelectorConfig(options=bridges, mode=selector.SelectSelectorMode.DROPDOWN)
-                ),
-                vol.Optional(CONF_CONFIG_JSON): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
-                vol.Optional(CONF_MASTER_MSB): _secret_text(),
-                vol.Optional(CONF_MASTER_LSB): _secret_text(),
-                vol.Optional(CONF_BASE_SERIAL): _secret_text(),
-                vol.Required(CONF_COUNTER_START): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_COUNTER, max=MAX_COUNTER, step=1, mode=selector.NumberSelectorMode.BOX
-                    )
-                ),
-                vol.Optional(OPT_TX_ENABLED, default=False): selector.BooleanSelector(),
-            }
+        fields: dict[Any, Any] = {
+            vol.Required(CONF_BRIDGE_SERVICE, default=bridges[0]): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=bridges, mode=selector.SelectSelectorMode.DROPDOWN)
+            ),
+        }
+        if step_id == "import_config":
+            fields[vol.Required(CONF_CONFIG_JSON)] = selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+            fields[vol.Optional(CONF_MASTER_MSB)] = _secret_text()
+            fields[vol.Optional(CONF_MASTER_LSB)] = _secret_text()
+            fields[vol.Optional(CONF_BASE_SERIAL)] = _secret_text()
+        else:
+            fields[vol.Required(CONF_MASTER_MSB)] = _secret_text()
+            fields[vol.Required(CONF_MASTER_LSB)] = _secret_text()
+            fields[vol.Optional(CONF_BASE_SERIAL)] = _secret_text()
+            fields[vol.Optional(CONF_CHANNEL_NAMES)] = selector.TextSelector(
+                selector.TextSelectorConfig(multiline=True)
+            )
+        fields[vol.Required(CONF_COUNTER_START, default=MIN_COUNTER)] = selector.NumberSelector(
+            selector.NumberSelectorConfig(min=MIN_COUNTER, max=MAX_COUNTER, step=1, mode=selector.NumberSelectorMode.BOX)
         )
-        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+        fields[vol.Optional(OPT_LEGACY_LEARN, default=False)] = selector.BooleanSelector()
+        fields[vol.Optional(OPT_TX_ENABLED, default=False)] = selector.BooleanSelector()
+        return self.async_show_form(step_id=step_id, data_schema=vol.Schema(fields), errors=errors)
 
     def _build_import(self, imported: dict[str, Any]) -> None:
         self._subentries = [

@@ -7,10 +7,11 @@ from enum import StrEnum
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .bridge import EsphomeBridge
-from .const import SIGNAL_COUNTER, SIGNAL_STATE
+from .const import COUNTER_WARN_AT, DOMAIN, SIGNAL_COUNTER, SIGNAL_STATE
 from .counter import CounterStore
 from .scheduler import TxScheduler
 
@@ -38,6 +39,14 @@ class JaroliftRuntime:
     @callback
     def async_counter_changed(self) -> None:
         async_dispatcher_send(self.hass, SIGNAL_COUNTER.format(self.entry_id))
+        issue_id = f"counter_high_{self.entry_id}"
+        if self.counter.next >= COUNTER_WARN_AT:
+            ir.async_create_issue(
+                self.hass, DOMAIN, issue_id, is_fixable=False, severity=ir.IssueSeverity.WARNING,
+                translation_key="counter_high", translation_placeholders={"next": str(self.counter.next)},
+            )
+        else:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
 
 type JaroliftConfigEntry = ConfigEntry[JaroliftRuntime]

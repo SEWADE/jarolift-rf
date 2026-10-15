@@ -12,6 +12,7 @@ CONF_MASTER_LSB: Final = "master_lsb"
 CONF_BASE_SERIAL: Final = "base_serial"
 CONF_COUNTER_START: Final = "counter_start"
 CONF_CONFIG_JSON: Final = "config_json"
+CONF_CHANNEL_NAMES: Final = "channel_names"
 
 OPT_TX_ENABLED: Final = "tx_enabled"
 OPT_TX_POWER: Final = "tx_power_dbm"

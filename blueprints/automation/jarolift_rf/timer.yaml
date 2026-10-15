@@ -1,0 +1,154 @@
+blueprint:
+  name: Jarolift timer
+  description: >-
+    Replacement for the timers of the ESP32-Jarolift-Controller: fixed time or
+    sunrise/sunset with offset, weekdays, and optional earliest/latest time
+    (sun event is clamped into that window). Runs at most once per day.
+  domain: automation
+  source_url: https://github.com/SEWADE/jarolift-rf/blob/main/blueprints/automation/jarolift_rf/timer.yaml
+  input:
+    shutters:
+      name: Shutters / groups
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: jarolift_rf
+              domain: cover
+    command:
+      name: Command
+      default: close
+      selector:
+        select:
+          options:
+            - {label: "Up", value: "open"}
+            - {label: "Down", value: "close"}
+            - {label: "Stop", value: "stop"}
+            - {label: "Shade position", value: "shade"}
+    mode:
+      name: Trigger
+      default: fixed
+      selector:
+        select:
+          options:
+            - {label: "Fixed time", value: "fixed"}
+            - {label: "Sunrise", value: "sunrise"}
+            - {label: "Sunset", value: "sunset"}
+    time:
+      name: Time (fixed time only)
+      default: "07:00:00"
+      selector:
+        time: {}
+    offset:
+      name: Offset to sun event
+      description: "hh:mm:ss, negative allowed, e.g. -00:30:00 = 30 min before"
+      default: "00:00:00"
+      selector:
+        text: {}
+    use_min:
+      name: Not earlier than
+      default: false
+      selector:
+        boolean: {}
+    min_time:
+      name: Earliest time
+      default: "06:00:00"
+      selector:
+        time: {}
+    use_max:
+      name: Not later than
+      default: false
+      selector:
+        boolean: {}
+    max_time:
+      name: Latest time
+      default: "22:00:00"
+      selector:
+        time: {}
+    weekdays:
+      name: Weekdays
+      default: [mon, tue, wed, thu, fri, sat, sun]
+      selector:
+        select:
+          multiple: true
+          options:
+            - {label: "Monday", value: mon}
+            - {label: "Tuesday", value: tue}
+            - {label: "Wednesday", value: wed}
+            - {label: "Thursday", value: thu}
+            - {label: "Friday", value: fri}
+            - {label: "Saturday", value: sat}
+            - {label: "Sunday", value: sun}
+
+mode: single
+max_exceeded: silent
+
+variables:
+  trigger_mode: !input mode
+  command: !input command
+  shutters: !input shutters
+  use_min: !input use_min
+  use_max: !input use_max
+  min_time: !input min_time
+  max_time: !input max_time
+  offset: !input offset
+  sun_event: "{{ 'rising' if trigger_mode == 'sunrise' else 'setting' }}"
+
+triggers:
+  - trigger: time
+    at: !input time
+    id: fixed
+  - trigger: sun
+    event: sunrise
+    offset: !input offset
+    id: sunrise
+  - trigger: sun
+    event: sunset
+    offset: !input offset
+    id: sunset
+  - trigger: time
+    at: !input min_time
+    id: min
+  - trigger: time
+    at: !input max_time
+    id: max
+
+conditions:
+  - condition: time
+    weekday: !input weekdays
+  # at most once per day
+  - condition: template
+    value_template: >-
+      {{ this.attributes.last_triggered is none
+         or as_local(this.attributes.last_triggered).date() != now().date() }}
+  - condition: template
+    value_template: >-
+      {% set t = now().strftime('%H:%M:%S') %}
+      {% set after_min = (not use_min) or t >= min_time %}
+      {% set before_max = (not use_max) or t <= max_time %}
+      {% if trigger_mode == 'fixed' %}
+        {{ trigger.id == 'fixed' }}
+      {% elif trigger.id == trigger_mode %}
+        {{ after_min and before_max }}
+      {% elif trigger.id == 'min' %}
+        {# sun event (+offset) already passed today but was before the earliest time #}
+        {% set next_evt = as_datetime(state_attr('sun.sun', 'next_' ~ sun_event)) + as_timedelta(offset) %}
+        {{ use_min and as_local(next_evt).date() != now().date() }}
+      {% elif trigger.id == 'max' %}
+        {# sun event has not happened yet today: latest time wins #}
+        {{ use_max }}
+      {% else %}
+        false
+      {% endif %}
+
+actions:
+  - choose:
+      - conditions: "{{ command == 'shade' }}"
+        sequence:
+          - action: jarolift_rf.shade
+            target:
+              entity_id: "{{ shutters }}"
+    default:
+      - action: "cover.{{ command }}_cover"
+        target:
+          entity_id: "{{ shutters }}"

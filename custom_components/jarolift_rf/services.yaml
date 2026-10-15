@@ -1,0 +1,80 @@
+learn:
+  target:
+    entity:
+      integration: jarolift_rf
+      domain: cover
+  fields:
+    confirm:
+      required: true
+      selector:
+        boolean:
+unlearn:
+  target:
+    entity:
+      integration: jarolift_rf
+      domain: cover
+  fields:
+    confirm:
+      required: true
+      selector:
+        boolean:
+set_endpoint:
+  target:
+    entity:
+      integration: jarolift_rf
+      domain: cover
+  fields:
+    position:
+      required: true
+      selector:
+        select:
+          options: ["up", "down"]
+          translation_key: position
+    confirm:
+      required: true
+      selector:
+        boolean:
+delete_endpoint:
+  target:
+    entity:
+      integration: jarolift_rf
+      domain: cover
+  fields:
+    position:
+      required: true
+      selector:
+        select:
+          options: ["up", "down"]
+          translation_key: position
+    confirm:
+      required: true
+      selector:
+        boolean:
+set_shade:
+  target:
+    entity:
+      integration: jarolift_rf
+      domain: cover
+shade:
+  target:
+    entity:
+      integration: jarolift_rf
+      domain: cover
+set_counter:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: jarolift_rf
+    value:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 65535
+          mode: box
+    confirm:
+      required: true
+      selector:
+        boolean:

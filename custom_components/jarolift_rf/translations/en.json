@@ -3,6 +3,38 @@
     "step": {
       "user": {
         "title": "Jarolift RF",
+        "description": "Set up a new installation, or take over an existing ESP32-Jarolift-Controller.",
+        "menu_options": {
+          "manual": "New installation",
+          "import_config": "Import from ESP32-Jarolift-Controller (config.json)"
+        }
+      },
+      "manual": {
+        "title": "New installation",
+        "description": "Enter the Jarolift master keys. Leave the serial empty to generate a new one; every motor then has to be learned (button or action 'Learn').",
+        "data": {
+          "bridge_service": "Radio bridge (ESPHome action)",
+          "master_msb": "Master key MSB",
+          "master_lsb": "Master key LSB",
+          "base_serial": "Base serial number",
+          "channel_names": "Shutters (optional)",
+          "counter_start": "Start counter",
+          "legacy_learn": "Legacy learn mode",
+          "tx_enabled": "Transmitting enabled"
+        },
+        "data_description": {
+          "bridge_service": "ESPHome device running the jarolift-bridge package (action DEVICE_send_raw).",
+          "master_msb": "Decimal, or hexadecimal with 0x prefix.",
+          "master_lsb": "Decimal, or hexadecimal with 0x prefix.",
+          "base_serial": "Optional. 20 bit (max 0xFFFFF). Empty = generate a new serial.",
+          "channel_names": "One name per line; line 1 = channel 1. More channels can be added later.",
+          "counter_start": "1 for a new serial. When reusing a serial: last counter of the old sender + 16.",
+          "legacy_learn": "Only for very old receivers. The old controller always used the new mode.",
+          "tx_enabled": "Leave off for a receive-only first test. Nothing is sent while off."
+        }
+      },
+      "import_config": {
+        "title": "Import from ESP32-Jarolift-Controller (config.json)",
         "description": "Paste the config.json of the original ESP32-Jarolift-Controller to take over keys, serial, channels and groups, or enter keys and serial manually. Keys are stored only in Home Assistant and never logged.",
         "data": {
           "bridge_service": "Radio bridge (ESPHome action)",
@@ -11,6 +43,7 @@
           "master_lsb": "Master key LSB",
           "base_serial": "Base serial number",
           "counter_start": "Start counter",
+          "legacy_learn": "Legacy learn mode",
           "tx_enabled": "Transmitting enabled"
         },
         "data_description": {
@@ -20,12 +53,13 @@
           "master_lsb": "Decimal, or hexadecimal with 0x prefix. Leave empty to take it from config.json.",
           "base_serial": "20 bit (max 0xFFFFF). Decimal or 0x… Leave empty to take it from config.json.",
           "counter_start": "Device counter of the old controller + 16 (safety margin). Can only move forward later.",
+          "legacy_learn": "Only for very old receivers. The old controller always used the new mode.",
           "tx_enabled": "Leave off for a receive-only first test. Nothing is sent while off."
         }
       },
       "import_summary": {
         "title": "Import from config.json",
-        "description": "Channels:\n{channels}\n\nGroups:\n{groups}\n\nGroups that had no channels in the old controller (mask 0); members derived from the channel names, please check:\n{derived}"
+        "description": "Channels:\n{channels}\n\nGroups:\n{groups}\n\nGroups without channels in the old controller (mask 0, they never moved anything). Members suggested from channel names of the form \"GROUP - NAME\"; check and adjust later if needed:\n{derived}"
       }
     },
     "error": {
@@ -119,12 +153,129 @@
     "button": {
       "shade": {
         "name": "Shade position"
+      },
+      "learn": {
+        "name": "Learn"
+      },
+      "unlearn": {
+        "name": "Unlearn"
+      },
+      "set_shade": {
+        "name": "Save shade position"
+      },
+      "set_endpoint_up": {
+        "name": "Set upper end point"
+      },
+      "delete_endpoint_up": {
+        "name": "Delete upper end point"
+      },
+      "set_endpoint_down": {
+        "name": "Set lower end point"
+      },
+      "delete_endpoint_down": {
+        "name": "Delete lower end point"
       }
     },
     "sensor": {
       "next_counter": {
         "name": "Next counter"
       }
+    }
+  },
+  "services": {
+    "learn": {
+      "name": "Learn",
+      "description": "Teach this channel to a motor in learn mode.",
+      "fields": {
+        "confirm": {
+          "name": "Confirm",
+          "description": "Must be enabled."
+        }
+      }
+    },
+    "unlearn": {
+      "name": "Unlearn",
+      "description": "Remove this channel from the motor.",
+      "fields": {
+        "confirm": {
+          "name": "Confirm",
+          "description": "Must be enabled."
+        }
+      }
+    },
+    "set_endpoint": {
+      "name": "Set end point",
+      "description": "Store the current position as upper or lower end point.",
+      "fields": {
+        "position": {
+          "name": "End point",
+          "description": "Upper or lower."
+        },
+        "confirm": {
+          "name": "Confirm",
+          "description": "Must be enabled."
+        }
+      }
+    },
+    "delete_endpoint": {
+      "name": "Delete end point",
+      "description": "Delete the upper or lower end point.",
+      "fields": {
+        "position": {
+          "name": "End point",
+          "description": "Upper or lower."
+        },
+        "confirm": {
+          "name": "Confirm",
+          "description": "Must be enabled."
+        }
+      }
+    },
+    "set_shade": {
+      "name": "Save shade position",
+      "description": "Store the current position as shade position.",
+      "fields": {}
+    },
+    "shade": {
+      "name": "Drive to shade position",
+      "description": "Drive channels or groups to the stored shade position.",
+      "fields": {}
+    },
+    "set_counter": {
+      "name": "Set counter",
+      "description": "Move the rolling-code counter forward (never backwards).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Integration entry",
+          "description": "Jarolift RF entry."
+        },
+        "value": {
+          "name": "Next value",
+          "description": "Next counter value to send."
+        },
+        "confirm": {
+          "name": "Confirm",
+          "description": "Must be enabled."
+        }
+      }
+    }
+  },
+  "selector": {
+    "position": {
+      "options": {
+        "up": "Up",
+        "down": "Down"
+      }
+    }
+  },
+  "issues": {
+    "counter_high": {
+      "title": "Jarolift counter almost exhausted",
+      "description": "The next rolling-code counter value is {next} of 65535. Before it runs out, set up a new serial number and learn all motors again."
+    },
+    "entity_id_blocked": {
+      "title": "Old entities block Jarolift entity IDs",
+      "description": "These entity IDs are still used by other entities (usually the old MQTT controller):\n{entities}\n\nRemove the old MQTT device (and its retained discovery topics), then reload Jarolift RF. The IDs are taken over automatically."
     }
   },
   "exceptions": {
@@ -154,6 +305,18 @@
     },
     "command_too_old": {
       "message": "Command dropped: waited too long in the queue."
+    },
+    "channel_required": {
+      "message": "{entity_id} is a group; this action needs single channels."
+    },
+    "no_target": {
+      "message": "No Jarolift RF shutter selected."
+    },
+    "entry_not_loaded": {
+      "message": "Jarolift RF entry not found or not loaded."
+    },
+    "counter_backwards": {
+      "message": "The counter can only move forward (current: {current})."
     }
   }
 }

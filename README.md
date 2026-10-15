@@ -7,8 +7,25 @@ Anlernen, Endpunkte, Schatten. Die Hardware ist nur eine **zustandslose Funkbrü
 
 > **Status: Vorabversion, noch nicht an echter Hardware getestet.**
 > Fertig: Protokollkern (bitgenau gegen dewenni/ESP32-Jarolift-Controller v1.9.0 getestet),
-> Zähler, Sendewarteschlange, Rollläden, Gruppen, Schatten, Einrichtung mit Import der alten
-> `config.json`, ESPHome-Brücke. Folgt: Anlern-/Endpunkt-Aktionen, Diagnose, Fernbedienungsempfang.
+> Zähler, Sendewarteschlange, Rollläden, Gruppen, Schatten, Anlernen/Ablernen, Endpunkte,
+> Einrichtung neu oder per Import der alten `config.json`, Diagnose, Timer-Blueprint,
+> ESPHome-Brücke. Folgt: Empfang der Original-Fernbedienungen.
+
+## Funktionen
+
+| Funktion | Wo |
+|---|---|
+| Hoch / Runter / Stopp | `cover`-Entität je Kanal und Gruppe |
+| Schattenposition anfahren | Button *Schattenposition* oder Aktion `jarolift_rf.shade` |
+| Schattenposition speichern | Aktion `jarolift_rf.set_shade` / Konfig-Button |
+| Anlernen / Ablernen | Aktionen `jarolift_rf.learn` / `unlearn` (mit `confirm: true`) / Konfig-Buttons |
+| Endpunkte setzen / löschen | Aktionen `jarolift_rf.set_endpoint` / `delete_endpoint` / Konfig-Buttons |
+| Zähler vorstellen | Aktion `jarolift_rf.set_counter` (nur vorwärts) |
+| Timer (Uhrzeit, Sonnenauf-/untergang ± Versatz, Wochentage, frühestens/spätestens) | Blueprint [`timer.yaml`](blueprints/automation/jarolift_rf/timer.yaml) |
+| Funkeinstellungen (Senden an/aus, Leistung, Bündelung, Legacy-Lernmodus) | Optionen der Integration |
+
+Die Konfig-Buttons (Anlernen, Endpunkte …) sind auf der Geräteseite jedes Kanals vorhanden, aber
+standardmäßig deaktiviert, damit sie weder versehentlich noch per Assist ausgelöst werden.
 
 ## Installation
 
@@ -17,14 +34,20 @@ Anlernen, Endpunkte, Schatten. Die Hardware ist nur eine **zustandslose Funkbrü
    flashen und das Gerät in Home Assistant hinzufügen.
 2. **Integration:** HACS → Benutzerdefinierte Repositories → `https://github.com/SEWADE/jarolift-rf`,
    Typ *Integration* → herunterladen → Home Assistant neu starten.
-3. Einstellungen → Geräte & Dienste → *Jarolift RF* hinzufügen. Die `config.json` des alten
-   Controllers einfügen (übernimmt Schlüssel, Seriennummer, Kanäle, Gruppen) und den Startwert
-   des Zählers angeben (alter Zählerstand + 16).
+3. Einstellungen → Geräte & Dienste → *Jarolift RF* hinzufügen und wählen:
+   - **Neu einrichten:** Master-Schlüssel eingeben; Seriennummer wird erzeugt (oder eigene
+     angeben). Rollläden als Liste eintragen oder später als Kanäle hinzufügen, dann jeden Motor
+     anlernen (Button *Anlernen* auf der Geräteseite oder Aktion `jarolift_rf.learn`).
+   - **Von ESP32-Jarolift-Controller übernehmen:** dessen `config.json` einfügen (übernimmt
+     Schlüssel, Seriennummer, Kanäle, Gruppen) und als Startwert des Zählers den alten
+     Zählerstand + 16 angeben. Kein Neu-Anlernen nötig.
+   Kanäle und Gruppen lassen sich danach jederzeit in HA hinzufügen, umbenennen und ändern.
 4. Senden ist zunächst **aus**. Erst nach erfolgreichem Test in den Optionen einschalten.
 
-Die Entitäts-IDs entsprechen denen des alten MQTT-Controllers (z. B.
-`cover.jarolift_kuche_esstisch_klein`, `cover.jarolift_kuche`), sofern die alten MQTT-Entitäten
-vorher entfernt wurden.
+Die Entitäts-IDs folgen dem Schema des alten MQTT-Controllers: `cover.jarolift_<name>` für
+Kanäle und Gruppen. Solange die alten MQTT-Entitäten existieren, vergibt HA `..._2`. Ein
+Reparaturhinweis zeigt das an; nach dem Entfernen des alten MQTT-Geräts und Neuladen der
+Integration werden die ursprünglichen IDs automatisch übernommen.
 
 ## Aufbau
 

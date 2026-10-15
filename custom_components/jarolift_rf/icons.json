@@ -1,0 +1,26 @@
+{
+  "entity": {
+    "button": {
+      "shade": {"default": "mdi:blinds-horizontal"},
+      "learn": {"default": "mdi:link-plus"},
+      "unlearn": {"default": "mdi:link-off"},
+      "set_shade": {"default": "mdi:content-save"},
+      "set_endpoint_up": {"default": "mdi:arrow-collapse-up"},
+      "delete_endpoint_up": {"default": "mdi:arrow-up-bold-off"},
+      "set_endpoint_down": {"default": "mdi:arrow-collapse-down"},
+      "delete_endpoint_down": {"default": "mdi:arrow-down-bold-off"}
+    },
+    "sensor": {
+      "next_counter": {"default": "mdi:counter"}
+    }
+  },
+  "services": {
+    "learn": {"service": "mdi:link-plus"},
+    "unlearn": {"service": "mdi:link-off"},
+    "set_endpoint": {"service": "mdi:arrow-collapse-vertical"},
+    "delete_endpoint": {"service": "mdi:arrow-expand-vertical"},
+    "set_shade": {"service": "mdi:content-save"},
+    "shade": {"service": "mdi:blinds-horizontal"},
+    "set_counter": {"service": "mdi:counter"}
+  }
+}

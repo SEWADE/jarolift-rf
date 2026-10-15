@@ -24,7 +24,7 @@ class JaroliftEntity(Entity):
     """Entity of one channel or group; each has its own device named 'Jarolift <title>'.
 
     With has_entity_name and no entity name this yields entity ids like
-    ``cover.jarolift_kuche_esstisch_klein`` - the same as the old MQTT controller.
+    ``cover.jarolift_<channel_name>`` - the same scheme as the old MQTT controller.
     """
 
     _attr_has_entity_name = True
