@@ -8,3 +8,4 @@ config*.json
 !tests/vectors/*.json
 *.bin
 secrets.yaml
+*.log
