@@ -1,0 +1,4 @@
+Unmodified copies of lib/JaroliftController/{JaroliftController,KeeloqLib}.{cpp,h}
+from https://github.com/dewenni/ESP32-Jarolift-Controller
+commit 067f0ad3dc0de47eac7edb03d88ca2b9c72c22cb; lib/ identical to tag v1.9.0, MIT License (see LICENSE in this folder).
+Used only to generate reference test vectors on the host.

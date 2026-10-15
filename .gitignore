@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+# never commit device configs or flash dumps (contain keys)
+config*.json
+!tests/vectors/*.json
+*.bin
+secrets.yaml
