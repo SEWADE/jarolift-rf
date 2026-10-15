@@ -1,0 +1,31 @@
+name: esphome bridge
+on:
+  push:
+    paths: ["esphome/**", ".github/workflows/esphome.yml"]
+  pull_request:
+    paths: ["esphome/**"]
+  workflow_dispatch:
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: esp32-s3-devkitc-1
+            pins: "-s pin_sck GPIO12 -s pin_miso GPIO13 -s pin_mosi GPIO11 -s pin_cs GPIO10 -s pin_gdo0 GPIO4 -s pin_gdo2 GPIO5"
+          - board: esp32dev
+            pins: "-s pin_sck GPIO18 -s pin_miso GPIO19 -s pin_mosi GPIO23 -s pin_cs GPIO5 -s pin_gdo0 GPIO4 -s pin_gdo2 GPIO16"
+          - board: esp32-c3-devkitm-1
+            pins: "-s pin_sck GPIO6 -s pin_miso GPIO5 -s pin_mosi GPIO7 -s pin_cs GPIO10 -s pin_gdo0 GPIO4 -s pin_gdo2 GPIO3"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ matrix.board }}-v1
+      - run: pip install esphome
+      - run: esphome -s board ${{ matrix.board }} ${{ matrix.pins }} compile esphome/ci/bridge-test.yaml

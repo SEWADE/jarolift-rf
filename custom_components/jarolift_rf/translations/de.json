@@ -1,0 +1,159 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jarolift RF",
+        "description": "Füge die config.json des alten ESP32-Jarolift-Controllers ein, um Schlüssel, Seriennummer, Kanäle und Gruppen zu übernehmen, oder gib Schlüssel und Seriennummer von Hand ein. Schlüssel werden nur in Home Assistant gespeichert und nie protokolliert.",
+        "data": {
+          "bridge_service": "Funkbrücke (ESPHome-Aktion)",
+          "config_json": "config.json des alten Controllers (optional)",
+          "master_msb": "Master-Schlüssel MSB",
+          "master_lsb": "Master-Schlüssel LSB",
+          "base_serial": "Basis-Seriennummer",
+          "counter_start": "Startwert Zähler",
+          "tx_enabled": "Senden aktiv"
+        },
+        "data_description": {
+          "bridge_service": "ESPHome-Gerät mit dem jarolift-bridge-Paket (Aktion <gerät>_send_raw).",
+          "config_json": "Gelesen werden nur Schlüssel, Seriennummer, Kanäle und Gruppen; der Text selbst wird nicht gespeichert.",
+          "master_msb": "Dezimal oder hexadezimal mit 0x. Leer lassen, um den Wert aus der config.json zu nehmen.",
+          "master_lsb": "Dezimal oder hexadezimal mit 0x. Leer lassen, um den Wert aus der config.json zu nehmen.",
+          "base_serial": "20 Bit (max. 0xFFFFF). Dezimal oder 0x… Leer lassen, um den Wert aus der config.json zu nehmen.",
+          "counter_start": "Gerätezähler des alten Controllers + 16 (Sicherheitsaufschlag). Lässt sich später nur vorwärts verstellen.",
+          "tx_enabled": "Für einen ersten Test nur mit Empfang ausgeschaltet lassen. Solange aus, wird nichts gesendet."
+        }
+      },
+      "import_summary": {
+        "title": "Import aus config.json",
+        "description": "Kanäle:\n{channels}\n\nGruppen:\n{groups}\n\nGruppen ohne Kanäle im alten Controller (Maske 0); Mitglieder aus den Kanalnamen abgeleitet, bitte prüfen:\n{derived}"
+      }
+    },
+    "error": {
+      "required": "Pflichtfeld (oder config.json einfügen).",
+      "invalid_key": "Ungültiger Schlüssel (32 Bit, nicht beide 0).",
+      "invalid_serial": "Ungültige Seriennummer (0..0xFFFFF).",
+      "invalid_config_json": "config.json konnte nicht gelesen werden."
+    },
+    "abort": {
+      "no_bridge": "Kein ESPHome-Gerät mit der Aktion send_raw gefunden. Erst das jarolift-bridge-Paket flashen und das Gerät in Home Assistant hinzufügen.",
+      "already_configured": "Diese Seriennummer ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Funkeinstellungen",
+        "data": {
+          "tx_enabled": "Senden aktiv",
+          "tx_power_dbm": "Sendeleistung",
+          "bundle_ms": "Bündelungsfenster",
+          "legacy_learn": "Legacy-Lernmodus"
+        },
+        "data_description": {
+          "tx_enabled": "Für einen ersten Test nur mit Empfang ausgeschaltet lassen. Solange aus, wird nichts gesendet.",
+          "tx_power_dbm": "Der alte Controller sendete effektiv mit etwa 0 dBm.",
+          "bundle_ms": "Gleiche Befehle innerhalb dieser Zeit werden als ein Gruppentelegramm gesendet. 0 = aus.",
+          "legacy_learn": "Nur für sehr alte Empfänger. Der alte Controller nutzte immer den neuen Modus."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "channel": {
+      "entry_type": "Kanal",
+      "initiate_flow": {
+        "user": "Kanal hinzufügen",
+        "reconfigure": "Kanal bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Kanal hinzufügen",
+          "data": {
+            "name": "Name",
+            "channel": "Kanal"
+          }
+        },
+        "reconfigure": {
+          "title": "Kanal bearbeiten",
+          "data": {
+            "name": "Name"
+          }
+        }
+      },
+      "abort": {
+        "no_free_channel": "Alle 16 Kanäle sind belegt.",
+        "reconfigure_successful": "Gespeichert."
+      }
+    },
+    "group": {
+      "entry_type": "Gruppe",
+      "initiate_flow": {
+        "user": "Gruppe hinzufügen",
+        "reconfigure": "Gruppe bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Gruppe hinzufügen",
+          "data": {
+            "name": "Name",
+            "channels": "Kanäle"
+          }
+        },
+        "reconfigure": {
+          "title": "Gruppe bearbeiten",
+          "data": {
+            "name": "Name",
+            "channels": "Kanäle"
+          }
+        }
+      },
+      "error": {
+        "no_channels": "Mindestens einen Kanal wählen."
+      },
+      "abort": {
+        "reconfigure_successful": "Gespeichert."
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "shade": {
+        "name": "Schattenposition"
+      }
+    },
+    "sensor": {
+      "next_counter": {
+        "name": "Nächster Zählerwert"
+      }
+    }
+  },
+  "exceptions": {
+    "counter_exhausted": {
+      "message": "Der Rolling-Code-Zähler ist erschöpft (65535). Neue Seriennummer und neues Anlernen nötig."
+    },
+    "stopping": {
+      "message": "Home Assistant fährt herunter; es wird nichts gesendet."
+    },
+    "counter_write_failed": {
+      "message": "Zähler konnte nicht gespeichert werden; es wurde nichts gesendet."
+    },
+    "bridge_unavailable": {
+      "message": "Funkbrücke ist nicht erreichbar."
+    },
+    "bridge_timeout": {
+      "message": "Funkbrücke hat die Sendung nicht bestätigt."
+    },
+    "bridge_failed": {
+      "message": "Funkbrücke meldet einen Fehler: {error}"
+    },
+    "tx_disabled": {
+      "message": "Senden ist in den Optionen der Integration ausgeschaltet."
+    },
+    "queue_stopped": {
+      "message": "Befehl abgebrochen (Integration neu geladen)."
+    },
+    "command_too_old": {
+      "message": "Befehl verworfen: zu lange in der Warteschlange."
+    }
+  }
+}

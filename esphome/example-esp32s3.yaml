@@ -1,0 +1,36 @@
+# Example device config (ESP32-S3, pins as in the original controller).
+# Create a device in the ESPHome Device Builder and paste this.
+esphome:
+  name: jarolift-bridge
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+
+api:
+  encryption:
+    key: !secret jarolift_bridge_api_key
+
+ota:
+  - platform: esphome
+    password: !secret jarolift_bridge_ota_password
+
+substitutions:
+  pin_sck: GPIO12
+  pin_miso: GPIO13
+  pin_mosi: GPIO11
+  pin_cs: GPIO10
+  pin_gdo0: GPIO4
+  pin_gdo2: GPIO5
+
+packages:
+  jarolift: github://SEWADE/jarolift-rf/esphome/jarolift-bridge.yaml@main

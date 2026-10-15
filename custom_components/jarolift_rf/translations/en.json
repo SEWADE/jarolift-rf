@@ -1,0 +1,159 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jarolift RF",
+        "description": "Paste the config.json of the original ESP32-Jarolift-Controller to take over keys, serial, channels and groups, or enter keys and serial manually. Keys are stored only in Home Assistant and never logged.",
+        "data": {
+          "bridge_service": "Radio bridge (ESPHome action)",
+          "config_json": "config.json of the original controller (optional)",
+          "master_msb": "Master key MSB",
+          "master_lsb": "Master key LSB",
+          "base_serial": "Base serial number",
+          "counter_start": "Start counter",
+          "tx_enabled": "Transmitting enabled"
+        },
+        "data_description": {
+          "bridge_service": "ESPHome device running the jarolift-bridge package (action <device>_send_raw).",
+          "config_json": "Only keys, serial, channels and groups are read; the text itself is not stored.",
+          "master_msb": "Decimal, or hexadecimal with 0x prefix. Leave empty to take it from config.json.",
+          "master_lsb": "Decimal, or hexadecimal with 0x prefix. Leave empty to take it from config.json.",
+          "base_serial": "20 bit (max 0xFFFFF). Decimal or 0x… Leave empty to take it from config.json.",
+          "counter_start": "Device counter of the old controller + 16 (safety margin). Can only move forward later.",
+          "tx_enabled": "Leave off for a receive-only first test. Nothing is sent while off."
+        }
+      },
+      "import_summary": {
+        "title": "Import from config.json",
+        "description": "Channels:\n{channels}\n\nGroups:\n{groups}\n\nGroups that had no channels in the old controller (mask 0); members derived from the channel names, please check:\n{derived}"
+      }
+    },
+    "error": {
+      "required": "Required (or provide config.json).",
+      "invalid_key": "Invalid key (32 bit, not both zero).",
+      "invalid_serial": "Invalid serial (0..0xFFFFF).",
+      "invalid_config_json": "config.json could not be read."
+    },
+    "abort": {
+      "no_bridge": "No ESPHome device with a send_raw action found. Flash the jarolift-bridge package first and add the device to Home Assistant.",
+      "already_configured": "This serial number is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Radio settings",
+        "data": {
+          "tx_enabled": "Transmitting enabled",
+          "tx_power_dbm": "Transmit power",
+          "bundle_ms": "Bundling window",
+          "legacy_learn": "Legacy learn mode"
+        },
+        "data_description": {
+          "tx_enabled": "Leave off for a receive-only first test. Nothing is sent while off.",
+          "tx_power_dbm": "The old controller effectively sent with about 0 dBm.",
+          "bundle_ms": "Identical commands within this time are sent as one group telegram. 0 = off.",
+          "legacy_learn": "Only for very old receivers. The old controller always used the new mode."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "channel": {
+      "entry_type": "Channel",
+      "initiate_flow": {
+        "user": "Add channel",
+        "reconfigure": "Edit channel"
+      },
+      "step": {
+        "user": {
+          "title": "Add channel",
+          "data": {
+            "name": "Name",
+            "channel": "Channel"
+          }
+        },
+        "reconfigure": {
+          "title": "Edit channel",
+          "data": {
+            "name": "Name"
+          }
+        }
+      },
+      "abort": {
+        "no_free_channel": "All 16 channels are in use.",
+        "reconfigure_successful": "Saved."
+      }
+    },
+    "group": {
+      "entry_type": "Group",
+      "initiate_flow": {
+        "user": "Add group",
+        "reconfigure": "Edit group"
+      },
+      "step": {
+        "user": {
+          "title": "Add group",
+          "data": {
+            "name": "Name",
+            "channels": "Channels"
+          }
+        },
+        "reconfigure": {
+          "title": "Edit group",
+          "data": {
+            "name": "Name",
+            "channels": "Channels"
+          }
+        }
+      },
+      "error": {
+        "no_channels": "Select at least one channel."
+      },
+      "abort": {
+        "reconfigure_successful": "Saved."
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "shade": {
+        "name": "Shade position"
+      }
+    },
+    "sensor": {
+      "next_counter": {
+        "name": "Next counter"
+      }
+    }
+  },
+  "exceptions": {
+    "counter_exhausted": {
+      "message": "The rolling-code counter is exhausted (65535). New serial and re-learning required."
+    },
+    "stopping": {
+      "message": "Home Assistant is stopping; nothing is sent."
+    },
+    "counter_write_failed": {
+      "message": "Counter could not be saved; nothing was sent."
+    },
+    "bridge_unavailable": {
+      "message": "Radio bridge is not available."
+    },
+    "bridge_timeout": {
+      "message": "Radio bridge did not confirm the transmission."
+    },
+    "bridge_failed": {
+      "message": "Radio bridge reported an error: {error}"
+    },
+    "tx_disabled": {
+      "message": "Transmitting is disabled in the integration options."
+    },
+    "queue_stopped": {
+      "message": "Command cancelled (integration reloaded)."
+    },
+    "command_too_old": {
+      "message": "Command dropped: waited too long in the queue."
+    }
+  }
+}

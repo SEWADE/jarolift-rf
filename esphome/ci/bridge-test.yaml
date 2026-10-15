@@ -1,0 +1,24 @@
+# CI only: compiles the bridge package for one board (substitutions from the workflow).
+esphome:
+  name: jarolift-bridge-ci
+
+esp32:
+  board: ${board}
+  framework:
+    type: esp-idf
+
+logger:
+
+wifi:
+  ssid: "ci"
+  password: "ci-password"
+
+api:
+  encryption:
+    key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+
+ota:
+  - platform: esphome
+
+packages:
+  jarolift: !include ../jarolift-bridge.yaml

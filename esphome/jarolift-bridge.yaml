@@ -1,0 +1,109 @@
+# Jarolift RF bridge: stateless CC1101 transmitter/receiver for the
+# Home Assistant integration "jarolift_rf". Contains no Jarolift logic,
+# no keys and no counter. Include it as a package, see example-*.yaml.
+#
+# Required substitutions: pin_sck, pin_miso, pin_mosi, pin_cs, pin_gdo0, pin_gdo2
+
+substitutions:
+  max_pulses: "4000"      # 20 repetitions of a telegram need ~172 entries
+  max_airtime_us: "4000000"
+
+globals:
+  - id: jrf_tx_busy
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+spi:
+  clk_pin: ${pin_sck}
+  miso_pin: ${pin_miso}
+  mosi_pin: ${pin_mosi}
+
+cc1101:
+  id: jrf_radio
+  cs_pin: ${pin_cs}
+  frequency: 433.92MHz
+  modulation_type: ASK/OOK
+  output_power: 0         # HA sets the power for every transmission
+
+remote_transmitter:
+  id: jrf_tx
+  pin: ${pin_gdo0}        # CC1101 GDO0 = TX data input; high = carrier on
+  carrier_duty_percent: 100%
+  non_blocking: true
+  on_transmit:
+    then:
+      - cc1101.begin_tx: jrf_radio
+  on_complete:
+    then:
+      - cc1101.begin_rx: jrf_radio
+      - lambda: id(jrf_tx_busy) = false;
+
+api:
+  actions:
+    - action: send_raw
+      supports_response: status
+      variables:
+        pulses: int[]     # on-air timings in µs: >0 carrier on, <0 carrier off
+        repeat: int
+        gap_us: int
+        power_dbm: int
+      then:
+        - if:
+            condition:
+              lambda: return id(jrf_tx_busy);
+            then:
+              - api.respond:
+                  success: false
+                  error_message: "busy"
+            else:
+              - if:
+                  condition:
+                    lambda: |-
+                      if (pulses.size() < 2 || pulses.size() > ${max_pulses}) return true;
+                      if (repeat < 1 || repeat > 30 || gap_us < 0 || gap_us > 100000) return true;
+                      if (power_dbm < -30 || power_dbm > 11) return true;
+                      int64_t total = 0;
+                      for (int32_t p : pulses) {
+                        int32_t a = p < 0 ? -p : p;
+                        if (a < 1 || a > 32767) return true;
+                        total += a;
+                      }
+                      return (total + gap_us) * repeat > ${max_airtime_us};
+                  then:
+                    - api.respond:
+                        success: false
+                        error_message: "invalid request"
+                  else:
+                    - lambda: id(jrf_tx_busy) = true;
+                    - cc1101.set_output_power:
+                        id: jrf_radio
+                        value: !lambda return power_dbm;
+                    - remote_transmitter.transmit_raw:
+                        transmitter_id: jrf_tx
+                        code: !lambda return pulses;
+                        repeat:
+                          times: !lambda return repeat;
+                          wait_time: !lambda return gap_us;
+                    - wait_until:
+                        condition:
+                          lambda: return !id(jrf_tx_busy);
+                        timeout: 6s
+                    - if:
+                        condition:
+                          lambda: return id(jrf_tx_busy);
+                        then:
+                          - lambda: id(jrf_tx_busy) = false;
+                          - api.respond:
+                              success: false
+                              error_message: "transmit timeout"
+                        else:
+                          - api.respond:
+                              success: true
+
+remote_receiver:
+  id: jrf_rx
+  pin: ${pin_gdo2}        # CC1101 GDO2 = RX data output
+  filter: 150us
+  idle: 6ms
+  dump: []

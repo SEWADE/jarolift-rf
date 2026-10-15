@@ -1,0 +1,14 @@
+{
+  "domain": "jarolift_rf",
+  "name": "Jarolift RF",
+  "after_dependencies": ["esphome"],
+  "codeowners": ["@SEWADE"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/SEWADE/jarolift-rf",
+  "integration_type": "hub",
+  "iot_class": "assumed_state",
+  "issue_tracker": "https://github.com/SEWADE/jarolift-rf/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
