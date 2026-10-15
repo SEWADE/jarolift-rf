@@ -54,6 +54,8 @@ Kanäle und Gruppen. Solange die alten MQTT-Entitäten existieren, vergibt HA `.
 Reparaturhinweis zeigt das an; nach dem Entfernen des alten MQTT-Geräts und Neuladen der
 Integration werden die ursprünglichen IDs automatisch übernommen.
 
+Schritt-für-Schritt-Umstieg mit Abbruchkriterien und Rückweg: [docs/INBETRIEBNAHME.md](docs/INBETRIEBNAHME.md).
+
 ## Aufbau
 
 | Teil | Ordner |
