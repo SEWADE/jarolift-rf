@@ -5,7 +5,10 @@ Die komplette Jarolift-Logik läuft in HA: KeeLoq, Rolling-Code-Zähler, Kanäle
 Anlernen, Endpunkte, Schatten. Die Hardware ist nur eine **zustandslose Funkbrücke**
 (ESP32 + CC1101 mit ESPHome), die fertige Pulsfolgen sendet und Rohsignale empfängt.
 
-> **Status: Vorabversion, noch nicht an echter Hardware getestet.**
+> **Status: Vorabversion.** Auf echter Hardware getestet (ESP32-S3 DevKitC-1 + CC1101, Übernahme
+> eines ESP32-Jarolift-Controllers v1.9.0 ohne Neu-Anlernen): Hoch/Runter/Stopp aller Kanäle und
+> Gruppentelegramme funktionieren. Noch nicht an Hardware geprüft: Schatten, Endpunkte, Anlernen,
+> Fernbedienungsempfang.
 > Fertig: Protokollkern (bitgenau gegen dewenni/ESP32-Jarolift-Controller v1.9.0 getestet),
 > Zähler, Sendewarteschlange, Rollläden, Gruppen, Schatten, Anlernen/Ablernen, Endpunkte,
 > Einrichtung neu oder per Import der alten `config.json`, Diagnose, Timer-Blueprint,
