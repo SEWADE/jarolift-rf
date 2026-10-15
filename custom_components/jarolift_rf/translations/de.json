@@ -14,7 +14,7 @@
           "tx_enabled": "Senden aktiv"
         },
         "data_description": {
-          "bridge_service": "ESPHome-Gerät mit dem jarolift-bridge-Paket (Aktion <gerät>_send_raw).",
+          "bridge_service": "ESPHome-Gerät mit dem jarolift-bridge-Paket (Aktion GERÄTENAME_send_raw).",
           "config_json": "Gelesen werden nur Schlüssel, Seriennummer, Kanäle und Gruppen; der Text selbst wird nicht gespeichert.",
           "master_msb": "Dezimal oder hexadezimal mit 0x. Leer lassen, um den Wert aus der config.json zu nehmen.",
           "master_lsb": "Dezimal oder hexadezimal mit 0x. Leer lassen, um den Wert aus der config.json zu nehmen.",

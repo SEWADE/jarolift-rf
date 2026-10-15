@@ -19,8 +19,8 @@ jobs:
           - board: esp32-c3-devkitm-1
             pins: "-s pin_sck GPIO6 -s pin_miso GPIO5 -s pin_mosi GPIO7 -s pin_cs GPIO10 -s pin_gdo0 GPIO4 -s pin_gdo2 GPIO3"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - uses: actions/cache@v4

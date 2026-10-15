@@ -14,7 +14,7 @@
           "tx_enabled": "Transmitting enabled"
         },
         "data_description": {
-          "bridge_service": "ESPHome device running the jarolift-bridge package (action <device>_send_raw).",
+          "bridge_service": "ESPHome device running the jarolift-bridge package (action DEVICE_send_raw).",
           "config_json": "Only keys, serial, channels and groups are read; the text itself is not stored.",
           "master_msb": "Decimal, or hexadecimal with 0x prefix. Leave empty to take it from config.json.",
           "master_lsb": "Decimal, or hexadecimal with 0x prefix. Leave empty to take it from config.json.",
