@@ -33,4 +33,8 @@ substitutions:
   pin_gdo2: GPIO5
 
 packages:
-  jarolift: github://SEWADE/jarolift-rf/esphome/jarolift-bridge.yaml@main
+  jarolift:
+    url: https://github.com/SEWADE/jarolift-rf
+    ref: main
+    files: [esphome/jarolift-bridge.yaml]
+    refresh: 0s   # always fetch the latest package when compiling

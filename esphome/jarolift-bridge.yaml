@@ -17,6 +17,16 @@ globals:
     restore_value: false
     initial_value: "false"
 
+sensor:
+  - platform: wifi_signal
+    name: "WLAN-Signal"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "Laufzeit"
+    update_interval: 60s
+    entity_category: diagnostic
+
 spi:
   clk_pin: ${pin_sck}
   miso_pin: ${pin_miso}
