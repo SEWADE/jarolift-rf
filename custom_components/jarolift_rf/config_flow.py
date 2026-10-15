@@ -16,7 +16,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     ConfigSubentryData,
     ConfigSubentryFlow,
-    OptionsFlowWithReload,
+    OptionsFlow,
     SubentryFlowResult,
 )
 from homeassistant.const import CONF_NAME
@@ -126,7 +126,7 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlowWithReload:
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return JaroliftOptionsFlow()
 
     @classmethod
@@ -280,7 +280,9 @@ def _secret_text() -> selector.TextSelector:
     return selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD))
 
 
-class JaroliftOptionsFlow(OptionsFlowWithReload):
+class JaroliftOptionsFlow(OptionsFlow):
+    """Plain OptionsFlow: the entry's update listener reloads (also needed for subentry changes)."""
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             user_input[OPT_TX_POWER] = int(user_input[OPT_TX_POWER])

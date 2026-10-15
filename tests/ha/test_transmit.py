@@ -211,3 +211,27 @@ async def test_config_buttons_disabled_by_default(hass: HomeAssistant, bridge) -
     learn = [e for e in er.async_entries_for_config_entry(er.async_get(hass), hass.config_entries.async_entries(
         "jarolift_rf")[0].entry_id) if e.unique_id.endswith("_learn")]
     assert len(learn) == 3 and all(e.disabled_by is not None for e in learn)
+
+
+async def test_options_flow_enables_sending(hass: HomeAssistant, bridge) -> None:
+    entry = _entry(tx_enabled=False)
+    await _setup(hass, entry)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"tx_enabled": True, "tx_power_dbm": 0, "bundle_ms": 100, "legacy_learn": False})
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert entry.options["tx_enabled"] is True
+    await hass.services.async_call("cover", "stop_cover", {"entity_id": "cover.jarolift_room_a"}, blocking=True)
+    assert len(bridge.calls) == 1
+
+
+async def test_subentry_added_reloads(hass: HomeAssistant, bridge) -> None:
+    entry = _entry()
+    await _setup(hass, entry)
+    result = await hass.config_entries.subentries.async_init((entry.entry_id, "channel"), context={"source": "user"})
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": "Room C - Window", "channel": "9"})
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    assert hass.states.get("cover.jarolift_room_c_window") is not None
