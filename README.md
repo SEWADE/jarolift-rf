@@ -9,7 +9,7 @@ Anlernen, Endpunkte, Schatten. Die Hardware ist nur eine **zustandslose Funkbrü
 > Fertig: Protokollkern (bitgenau gegen dewenni/ESP32-Jarolift-Controller v1.9.0 getestet),
 > Zähler, Sendewarteschlange, Rollläden, Gruppen, Schatten, Anlernen/Ablernen, Endpunkte,
 > Einrichtung neu oder per Import der alten `config.json`, Diagnose, Timer-Blueprint,
-> ESPHome-Brücke. Folgt: Empfang der Original-Fernbedienungen.
+> Empfang der Original-Fernbedienungen, ESPHome-Brücke.
 
 ## Funktionen
 
@@ -23,6 +23,11 @@ Anlernen, Endpunkte, Schatten. Die Hardware ist nur eine **zustandslose Funkbrü
 | Zähler vorstellen | Aktion `jarolift_rf.set_counter` (nur vorwärts) |
 | Timer (Uhrzeit, Sonnenauf-/untergang ± Versatz, Wochentage, frühestens/spätestens) | Blueprint [`timer.yaml`](blueprints/automation/jarolift_rf/timer.yaml) |
 | Funkeinstellungen (Senden an/aus, Leistung, Bündelung, Legacy-Lernmodus) | Optionen der Integration |
+| Original-Fernbedienungen | `event`-Entität je Fernbedienung (hoch, runter, stopp, Schatten …), Bus-Event `jarolift_rf_remote`; Zustand der zugeordneten Rollläden wird nachgeführt |
+
+**Fernbedienung hinzufügen:** Taste drücken, dann *Fernbedienung hinzufügen* öffnen und die eben
+empfangene aus der Liste wählen. Wird ein Telegramm mit der eigenen Seriennummer empfangen (z. B.
+weil der alte Controller noch läuft), erscheint ein Reparaturhinweis.
 
 Die Konfig-Buttons (Anlernen, Endpunkte …) sind auf der Geräteseite jedes Kanals vorhanden, aber
 standardmäßig deaktiviert, damit sie weder versehentlich noch per Assist ausgelöst werden.

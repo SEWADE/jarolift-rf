@@ -12,7 +12,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import SIGNAL_STATE
 from .core.sequences import Command
-from .entity import JaroliftEntity
+from .entity import JaroliftEntity, is_shutter
 from .runtime import JaroliftConfigEntry, ShutterState
 
 ATTR_SHADE = "shade"
@@ -22,6 +22,8 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: JaroliftConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     for subentry in entry.subentries.values():
+        if not is_shutter(subentry):
+            continue
         async_add_entities([JaroliftCover(entry, subentry)], config_subentry_id=subentry.subentry_id)
 
 

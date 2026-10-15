@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
+import time
 from typing import Any
 
 import voluptuous as vol
@@ -33,6 +34,7 @@ from .const import (
     CONF_COUNTER_START,
     CONF_MASTER_LSB,
     CONF_MASTER_MSB,
+    CONF_REMOTE_SERIAL,
     DEFAULT_BUNDLE_MS,
     DEFAULT_TX_POWER,
     DOMAIN,
@@ -42,6 +44,7 @@ from .const import (
     OPT_TX_POWER,
     SUBENTRY_CHANNEL,
     SUBENTRY_GROUP,
+    SUBENTRY_REMOTE,
 )
 from .core.telegram import MAX_BASE_SERIAL, NUM_CHANNELS
 from .counter import MAX_COUNTER, MIN_COUNTER
@@ -89,7 +92,15 @@ def parse_original_config(text: str) -> dict[str, Any]:
             derived = True
         if members:
             groups.append((name, members, derived))
+    remotes: list[tuple[str, int, list[int]]] = []
+    for i, enabled in enumerate(jaro.get("remote_enable", [])):
+        name = str(jaro["remote_name"][i]).strip()
+        serial = int(jaro["remote_serial"][i])
+        if enabled and name and serial:
+            mask = int(jaro["remote_mask"][i])
+            remotes.append((name, serial, [n for n in range(1, NUM_CHANNELS + 1) if mask & (1 << (n - 1))]))
     return {
+        "remotes": remotes,
         CONF_MASTER_MSB: jaro.get("masterMSB"),
         CONF_MASTER_LSB: jaro.get("masterLSB"),
         CONF_BASE_SERIAL: jaro.get("serial"),
@@ -121,7 +132,11 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        return {SUBENTRY_CHANNEL: ChannelSubentryFlow, SUBENTRY_GROUP: GroupSubentryFlow}
+        return {
+            SUBENTRY_CHANNEL: ChannelSubentryFlow,
+            SUBENTRY_GROUP: GroupSubentryFlow,
+            SUBENTRY_REMOTE: RemoteSubentryFlow,
+        }
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if not find_esphome_bridges(self.hass):
@@ -227,12 +242,20 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             if derived:
                 self._derived.append(f"{name}: {', '.join(map(str, members))}")
+        for name, serial, members in imported.get("remotes", []):
+            self._subentries.append(
+                ConfigSubentryData(
+                    subentry_type=SUBENTRY_REMOTE, title=name,
+                    data={CONF_REMOTE_SERIAL: serial, CONF_CHANNELS: members}, unique_id=f"remote_{serial}",
+                )
+            )
 
     async def async_step_import_summary(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             return self._create()
         channels = [s for s in self._subentries if s["subentry_type"] == SUBENTRY_CHANNEL]
         groups = [s for s in self._subentries if s["subentry_type"] == SUBENTRY_GROUP]
+        remotes = [s for s in self._subentries if s["subentry_type"] == SUBENTRY_REMOTE]
         return self.async_show_form(
             step_id="import_summary",
             data_schema=vol.Schema({}),
@@ -243,6 +266,7 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 or "-",
                 "derived": "\n".join(f"- {d}" for d in self._derived) or "-",
+                "remotes": "\n".join(f"- {s['title']}" for s in remotes) or "-",
             },
         )
 
@@ -315,14 +339,17 @@ class ChannelSubentryFlow(ConfigSubentryFlow):
         return self.async_show_form(step_id="reconfigure", data_schema=schema)
 
 
+def _channel_options(entry: ConfigEntry) -> list[selector.SelectOptionDict]:
+    return [
+        selector.SelectOptionDict(value=str(s.data[CONF_CHANNEL]), label=f"{s.data[CONF_CHANNEL]}: {s.title}")
+        for s in sorted(entry.subentries.values(), key=lambda s: s.data.get(CONF_CHANNEL, 0))
+        if s.subentry_type == SUBENTRY_CHANNEL
+    ]
+
+
 class GroupSubentryFlow(ConfigSubentryFlow):
     def _schema(self, name: str = "", members: list[str] | None = None) -> vol.Schema:
-        entry = self._get_entry()
-        options = [
-            selector.SelectOptionDict(value=str(s.data[CONF_CHANNEL]), label=f"{s.data[CONF_CHANNEL]}: {s.title}")
-            for s in sorted(entry.subentries.values(), key=lambda s: s.data.get(CONF_CHANNEL, 0))
-            if s.subentry_type == SUBENTRY_CHANNEL
-        ]
+        options = _channel_options(self._get_entry())
         return vol.Schema(
             {
                 vol.Required(CONF_NAME, default=name): selector.TextSelector(),
@@ -360,4 +387,69 @@ class GroupSubentryFlow(ConfigSubentryFlow):
         members = [str(c) for c in subentry.data[CONF_CHANNELS]]
         return self.async_show_form(
             step_id="reconfigure", data_schema=self._schema(subentry.title, members), errors=errors
+        )
+
+
+MANUAL = "manual"
+
+
+class RemoteSubentryFlow(ConfigSubentryFlow):
+    """Original remote: pick a recently received unknown remote, or enter its serial."""
+
+    def _schema(self, name: str = "", members: list[str] | None = None, *, with_source: bool) -> vol.Schema:
+        fields: dict[Any, Any] = {vol.Required(CONF_NAME, default=name): selector.TextSelector()}
+        if with_source:
+            receiver = getattr(self._get_entry().runtime_data, "receiver", None)
+            seen = list(receiver.recent_unknown.values())[::-1] if receiver else []
+            options = [
+                selector.SelectOptionDict(
+                    value=str(r.remote_serial),
+                    label=f"{time.strftime('%H:%M:%S', time.localtime(time.time() - (time.monotonic() - r.seen)))}"
+                    f" · {r.event_type} · mask 0x{r.channel_mask:04X}{' ✓' if r.verified else ''}",
+                )
+                for r in seen
+            ] + [selector.SelectOptionDict(value=MANUAL, label="manual")]
+            fields[vol.Required("source", default=options[0]["value"])] = selector.SelectSelector(
+                selector.SelectSelectorConfig(options=options, translation_key="remote_source")
+            )
+            fields[vol.Optional(CONF_REMOTE_SERIAL)] = selector.TextSelector()
+        fields[vol.Optional(CONF_CHANNELS, default=members or [])] = selector.SelectSelector(
+            selector.SelectSelectorConfig(options=_channel_options(self._get_entry()), multiple=True)
+        )
+        return vol.Schema(fields)
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                if user_input["source"] == MANUAL:
+                    serial = parse_int(user_input.get(CONF_REMOTE_SERIAL, ""), MAX_BASE_SERIAL)
+                else:
+                    serial = int(user_input["source"])
+            except ValueError:
+                errors[CONF_REMOTE_SERIAL] = "invalid_serial"
+            else:
+                if any(
+                    s.subentry_type == SUBENTRY_REMOTE and s.data[CONF_REMOTE_SERIAL] == serial
+                    for s in self._get_entry().subentries.values()
+                ):
+                    return self.async_abort(reason="already_configured")
+                return self.async_create_entry(
+                    title=user_input[CONF_NAME].strip(),
+                    data={CONF_REMOTE_SERIAL: serial,
+                          CONF_CHANNELS: sorted(int(c) for c in user_input.get(CONF_CHANNELS, []))},
+                    unique_id=f"remote_{serial}",
+                )
+        return self.async_show_form(step_id="user", data_schema=self._schema(with_source=True), errors=errors)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        subentry = self._get_reconfigure_subentry()
+        if user_input is not None:
+            return self.async_update_and_abort(
+                self._get_entry(), subentry, title=user_input[CONF_NAME].strip(),
+                data_updates={CONF_CHANNELS: sorted(int(c) for c in user_input.get(CONF_CHANNELS, []))},
+            )
+        members = [str(c) for c in subentry.data.get(CONF_CHANNELS, [])]
+        return self.async_show_form(
+            step_id="reconfigure", data_schema=self._schema(subentry.title, members, with_source=False)
         )

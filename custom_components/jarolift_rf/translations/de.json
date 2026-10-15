@@ -59,7 +59,7 @@
       },
       "import_summary": {
         "title": "Import aus config.json",
-        "description": "Kanäle:\n{channels}\n\nGruppen:\n{groups}\n\nGruppen ohne Kanäle im alten Controller (Maske 0, sie haben nie etwas bewegt). Mitglieder aus Kanalnamen der Form \"GRUPPE - NAME\" vorgeschlagen; prüfen und ggf. später anpassen:\n{derived}"
+        "description": "Kanäle:\n{channels}\n\nGruppen:\n{groups}\n\nFernbedienungen:\n{remotes}\n\nGruppen ohne Kanäle im alten Controller (Maske 0, sie haben nie etwas bewegt). Mitglieder aus Kanalnamen der Form \"GRUPPE - NAME\" vorgeschlagen; prüfen und ggf. später anpassen:\n{derived}"
       }
     },
     "error": {
@@ -116,6 +116,47 @@
       },
       "abort": {
         "no_free_channel": "Alle 16 Kanäle sind belegt.",
+        "reconfigure_successful": "Gespeichert."
+      }
+    },
+    "remote": {
+      "entry_type": "Fernbedienung",
+      "initiate_flow": {
+        "user": "Fernbedienung hinzufügen",
+        "reconfigure": "Fernbedienung bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Fernbedienung hinzufügen",
+          "description": "Kurz vor dem Öffnen dieses Dialogs eine Taste der Fernbedienung drücken; sie erscheint dann in der Liste. Oder die Seriennummer von Hand eingeben.",
+          "data": {
+            "name": "Name",
+            "source": "Fernbedienung",
+            "remote_serial": "Seriennummer (manuell)",
+            "channels": "Von dieser Fernbedienung gesteuerte Rollläden"
+          },
+          "data_description": {
+            "source": "Zuletzt empfangene unbekannte Fernbedienungen (Uhrzeit, Taste, ihre Kanalmaske; Haken = kryptografisch geprüft).",
+            "remote_serial": "Wie 'remote_serial' in der alten config.json (dezimal oder 0x).",
+            "channels": "Deren Zustand wird bei Benutzung der Fernbedienung nachgeführt."
+          }
+        },
+        "reconfigure": {
+          "title": "Fernbedienung bearbeiten",
+          "data": {
+            "name": "Name",
+            "channels": "Von dieser Fernbedienung gesteuerte Rollläden"
+          },
+          "data_description": {
+            "channels": "Deren Zustand wird bei Benutzung der Fernbedienung nachgeführt."
+          }
+        }
+      },
+      "error": {
+        "invalid_serial": "Ungültige Seriennummer (0..0xFFFFF)."
+      },
+      "abort": {
+        "already_configured": "Diese Fernbedienung ist bereits eingerichtet.",
         "reconfigure_successful": "Gespeichert."
       }
     },
@@ -179,6 +220,23 @@
     "sensor": {
       "next_counter": {
         "name": "Nächster Zählerwert"
+      }
+    },
+    "event": {
+      "remote": {
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "up": "Hoch",
+              "down": "Runter",
+              "stop": "Stopp",
+              "shade": "Schattenposition",
+              "up_down": "Hoch+Runter",
+              "learn": "Anlernen",
+              "other": "Sonstige"
+            }
+          }
+        }
       }
     }
   },
@@ -266,6 +324,11 @@
         "up": "Oben",
         "down": "Unten"
       }
+    },
+    "remote_source": {
+      "options": {
+        "manual": "Seriennummer von Hand eingeben"
+      }
     }
   },
   "issues": {
@@ -276,6 +339,10 @@
     "entity_id_blocked": {
       "title": "Alte Entitäten blockieren Jarolift-Entitäts-IDs",
       "description": "Diese Entitäts-IDs werden noch von anderen Entitäten belegt (meist vom alten MQTT-Controller):\n{entities}\n\nAltes MQTT-Gerät (und seine retained Discovery-Topics) entfernen, dann Jarolift RF neu laden. Die IDs werden automatisch übernommen."
+    },
+    "foreign_sender": {
+      "title": "Anderer Sender nutzt diese Seriennummer",
+      "description": "Es wurde ein Telegramm mit der eigenen Seriennummer dieser Integration empfangen. Meist läuft der alte Controller noch. Zwei Sender mit einer Seriennummer und getrennten Zählern führen zu ignorierten Befehlen: alten Controller ausschalten (oder seinen CC1101 abziehen)."
     }
   },
   "exceptions": {

@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import SUBENTRY_CHANNEL
 from .core.sequences import Command
-from .entity import JaroliftEntity
+from .entity import JaroliftEntity, is_shutter
 from .runtime import JaroliftConfigEntry, ShutterState
 
 
@@ -18,6 +18,8 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: JaroliftConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     for subentry in entry.subentries.values():
+        if not is_shutter(subentry):
+            continue
         entities: list[ButtonEntity] = [ShadeButton(entry, subentry)]
         if subentry.subentry_type == SUBENTRY_CHANNEL:
             entities += [ProgramButton(entry, subentry, command) for command in PROGRAM_COMMANDS]

@@ -24,6 +24,8 @@ DEFAULT_BUNDLE_MS: Final = 100
 
 SUBENTRY_CHANNEL: Final = "channel"
 SUBENTRY_GROUP: Final = "group"
+SUBENTRY_REMOTE: Final = "remote"
+CONF_REMOTE_SERIAL: Final = "remote_serial"  # serial >> 8, as in the original config.json
 CONF_CHANNEL: Final = "channel"  # 1-based, as in the original WebUI
 CONF_CHANNELS: Final = "channels"
 
@@ -35,3 +37,7 @@ COUNTER_WARN_AT: Final = 65000
 
 SIGNAL_STATE: Final = f"{DOMAIN}_state_{{}}"  # format with entry_id
 SIGNAL_COUNTER: Final = f"{DOMAIN}_counter_{{}}"
+SIGNAL_REMOTE: Final = f"{DOMAIN}_remote_{{}}"
+
+RX_EVENT: Final = "esphome.jarolift_raw_rx"  # fired by the bridge package
+BUS_EVENT_REMOTE: Final = f"{DOMAIN}_remote"

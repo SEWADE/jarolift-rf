@@ -6,7 +6,7 @@ from homeassistant.config_entries import ConfigSubentry
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .const import CONF_CHANNEL, CONF_CHANNELS, DOMAIN, SUBENTRY_CHANNEL
+from .const import CONF_CHANNEL, CONF_CHANNELS, DOMAIN, SUBENTRY_CHANNEL, SUBENTRY_GROUP, SUBENTRY_REMOTE
 from .runtime import JaroliftConfigEntry, JaroliftRuntime
 
 
@@ -15,7 +15,7 @@ def subentry_mask(subentry: ConfigSubentry) -> int:
     if subentry.subentry_type == SUBENTRY_CHANNEL:
         return 1 << (subentry.data[CONF_CHANNEL] - 1)
     mask = 0
-    for ch in subentry.data[CONF_CHANNELS]:
+    for ch in subentry.data.get(CONF_CHANNELS, []):
         mask |= 1 << (int(ch) - 1)
     return mask
 
@@ -38,6 +38,12 @@ class JaroliftEntity(Entity):
             identifiers={(DOMAIN, f"{entry.entry_id}_{subentry.subentry_id}")},
             name=f"Jarolift {subentry.title}",
             manufacturer="Jarolift",
-            model="Gruppe" if self._is_group else f"Kanal {subentry.data[CONF_CHANNEL]}",
+            model={SUBENTRY_GROUP: "Gruppe", SUBENTRY_REMOTE: "Fernbedienung"}.get(
+                subentry.subentry_type, f"Kanal {subentry.data.get(CONF_CHANNEL)}"
+            ),
             via_device_id=self._runtime.hub_device_id,
         )
+
+
+def is_shutter(subentry: ConfigSubentry) -> bool:
+    return subentry.subentry_type in (SUBENTRY_CHANNEL, SUBENTRY_GROUP)

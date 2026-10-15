@@ -47,6 +47,8 @@ async def test_import_original_config(hass: HomeAssistant, bridge) -> None:
     subs = list(entry.subentries.values())
     channels = {s.data[CONF_CHANNEL]: s.title for s in subs if s.subentry_type == "channel"}
     groups = {s.title: s.data[CONF_CHANNELS] for s in subs if s.subentry_type == "group"}
+    remotes = {s.title: dict(s.data) for s in subs if s.subentry_type == "remote"}
+    assert remotes == {"Remote X": {"remote_serial": 0x0B0B0, "channels": [1, 2, 3, 4]}}
     assert channels[1] == "Room A - Window 1" and len(channels) == 8
     assert groups == {"Room A": [1, 2, 3, 4], "Room B": [5, 6, 7, 8]}
 

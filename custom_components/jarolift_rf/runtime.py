@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -30,6 +31,7 @@ class JaroliftRuntime:
     counter: CounterStore
     scheduler: TxScheduler
     hub_device_id: str = ""
+    receiver: Any = None  # receiver.RemoteReceiver (avoids an import cycle)
 
     @callback
     def async_set_state(self, mask: int, state: ShutterState) -> None:

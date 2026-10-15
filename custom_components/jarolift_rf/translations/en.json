@@ -59,7 +59,7 @@
       },
       "import_summary": {
         "title": "Import from config.json",
-        "description": "Channels:\n{channels}\n\nGroups:\n{groups}\n\nGroups without channels in the old controller (mask 0, they never moved anything). Members suggested from channel names of the form \"GROUP - NAME\"; check and adjust later if needed:\n{derived}"
+        "description": "Channels:\n{channels}\n\nGroups:\n{groups}\n\nRemotes:\n{remotes}\n\nGroups without channels in the old controller (mask 0, they never moved anything). Members suggested from channel names of the form \"GROUP - NAME\"; check and adjust later if needed:\n{derived}"
       }
     },
     "error": {
@@ -116,6 +116,47 @@
       },
       "abort": {
         "no_free_channel": "All 16 channels are in use.",
+        "reconfigure_successful": "Saved."
+      }
+    },
+    "remote": {
+      "entry_type": "Remote",
+      "initiate_flow": {
+        "user": "Add remote",
+        "reconfigure": "Edit remote"
+      },
+      "step": {
+        "user": {
+          "title": "Add remote",
+          "description": "Press a button on the remote shortly before opening this dialog; it then appears in the list. Or enter its serial manually.",
+          "data": {
+            "name": "Name",
+            "source": "Remote",
+            "remote_serial": "Serial (manual)",
+            "channels": "Shutters controlled by this remote"
+          },
+          "data_description": {
+            "source": "Recently received unknown remotes (time, button, its channel mask; check mark = cryptographically verified).",
+            "remote_serial": "As 'remote_serial' in the old config.json (decimal or 0x).",
+            "channels": "Their state is updated when the remote is used."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit remote",
+          "data": {
+            "name": "Name",
+            "channels": "Shutters controlled by this remote"
+          },
+          "data_description": {
+            "channels": "Their state is updated when the remote is used."
+          }
+        }
+      },
+      "error": {
+        "invalid_serial": "Invalid serial (0..0xFFFFF)."
+      },
+      "abort": {
+        "already_configured": "This remote is already configured.",
         "reconfigure_successful": "Saved."
       }
     },
@@ -179,6 +220,23 @@
     "sensor": {
       "next_counter": {
         "name": "Next counter"
+      }
+    },
+    "event": {
+      "remote": {
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "up": "Up",
+              "down": "Down",
+              "stop": "Stop",
+              "shade": "Shade position",
+              "up_down": "Up+Down",
+              "learn": "Learn",
+              "other": "Other"
+            }
+          }
+        }
       }
     }
   },
@@ -266,6 +324,11 @@
         "up": "Up",
         "down": "Down"
       }
+    },
+    "remote_source": {
+      "options": {
+        "manual": "Enter serial manually"
+      }
     }
   },
   "issues": {
@@ -276,6 +339,10 @@
     "entity_id_blocked": {
       "title": "Old entities block Jarolift entity IDs",
       "description": "These entity IDs are still used by other entities (usually the old MQTT controller):\n{entities}\n\nRemove the old MQTT device (and its retained discovery topics), then reload Jarolift RF. The IDs are taken over automatically."
+    },
+    "foreign_sender": {
+      "title": "Another sender uses this serial number",
+      "description": "A telegram with this integration's own serial number was received. Usually the old controller is still running. Two senders with one serial and separate counters cause missed commands: switch the old controller off (or remove its CC1101)."
     }
   },
   "exceptions": {

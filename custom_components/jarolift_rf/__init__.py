@@ -29,13 +29,15 @@ from .const import (
     OPT_LEGACY_LEARN,
     OPT_TX_ENABLED,
     OPT_TX_POWER,
+    RX_EVENT,
 )
 from .counter import CounterStore
+from .receiver import RemoteReceiver
 from .runtime import JaroliftConfigEntry, JaroliftRuntime
 from .scheduler import TxScheduler, TxSettings
 from .services import async_setup_services
 
-PLATFORMS = [Platform.BUTTON, Platform.COVER, Platform.SENSOR]
+PLATFORMS = [Platform.BUTTON, Platform.COVER, Platform.EVENT, Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
@@ -81,6 +83,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: JaroliftConfigEntry) -> 
         model="KeeLoq RF (ESPHome bridge)",
     )
     runtime.hub_device_id = hub.id
+    runtime.receiver = RemoteReceiver(
+        hass, entry, data[CONF_BASE_SERIAL], (data[CONF_MASTER_MSB], data[CONF_MASTER_LSB])
+    )
+    entry.async_on_unload(hass.bus.async_listen(RX_EVENT, runtime.receiver.handle_raw_event))
 
     scheduler.start(entry)
     entry.async_on_unload(scheduler.async_stop)

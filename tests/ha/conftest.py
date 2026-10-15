@@ -35,10 +35,10 @@ ORIGINAL_CONFIG = {
         "grp_enable": [True, True, False, False, False, False],
         "grp_name": ["Room A", "Room B", "", "", "", ""],
         "grp_mask": [15, 0, 0, 0, 0, 0],
-        "remote_enable": [False] * 16,
-        "remote_name": [""] * 16,
-        "remote_mask": [0] * 16,
-        "remote_serial": [0] * 16,
+        "remote_enable": [True] + [False] * 15,
+        "remote_name": ["Remote X"] + [""] * 15,
+        "remote_mask": [15] + [0] * 15,
+        "remote_serial": [0x0B0B0] + [0] * 15,
     },
 }
 

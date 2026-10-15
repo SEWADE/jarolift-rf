@@ -7,6 +7,9 @@
 substitutions:
   max_pulses: "4000"      # 20 repetitions of a telegram need ~172 entries
   max_airtime_us: "4000000"
+  rx_min_pulses: "140"    # forward only packets of telegram size (a Jarolift frame has ~170)
+  rx_max_pulses: "400"
+  rx_max_per_second: "20"
 
 globals:
   - id: jrf_tx_busy
@@ -105,5 +108,29 @@ remote_receiver:
   id: jrf_rx
   pin: ${pin_gdo2}        # CC1101 GDO2 = RX data output
   filter: 150us
-  idle: 6ms
+  idle: 6ms               # > header space (3.9 ms), < gap between repetitions (16 ms)
   dump: []
+  on_raw:
+    then:
+      - if:
+          condition:
+            lambda: |-
+              // size and rate limits only; decoding happens in Home Assistant
+              static uint32_t window_start = 0;
+              static uint32_t count = 0;
+              if (x.size() < ${rx_min_pulses} || x.size() > ${rx_max_pulses}) return false;
+              uint32_t now = millis();
+              if (now - window_start > 1000) { window_start = now; count = 0; }
+              return ++count <= ${rx_max_per_second};
+          then:
+            - homeassistant.event:
+                event: esphome.jarolift_raw_rx
+                data:
+                  pulses: !lambda |-
+                    std::string out;
+                    out.reserve(x.size() * 6);
+                    for (size_t i = 0; i < x.size(); i++) {
+                      if (i) out += ',';
+                      out += std::to_string(x[i]);
+                    }
+                    return out;
