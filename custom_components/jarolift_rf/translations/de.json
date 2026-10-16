@@ -60,13 +60,31 @@
       "import_summary": {
         "title": "Import aus config.json",
         "description": "Kanäle:\n{channels}\n\nGruppen:\n{groups}\n\nFernbedienungen:\n{remotes}\n\nGruppen ohne Kanäle im alten Controller (Maske 0, sie haben nie etwas bewegt). Mitglieder aus Kanalnamen der Form \"GRUPPE - NAME\" vorgeschlagen; prüfen und ggf. später anpassen:\n{derived}"
+      },
+      "reconfigure": {
+        "title": "Verbindung und Schlüssel ändern",
+        "description": "Aktuell: Brücke {bridge}, Seriennummer {serial}, nächster Zählerwert {counter}. Schlüssel werden nicht angezeigt. Felder leer lassen, um die gespeicherten Werte zu behalten.",
+        "data": {
+          "bridge_service": "Funkbrücke (ESPHome-Aktion)",
+          "master_msb": "Master-Schlüssel MSB",
+          "master_lsb": "Master-Schlüssel LSB",
+          "base_serial": "Basis-Seriennummer",
+          "counter_start": "Startwert Zähler"
+        },
+        "data_description": {
+          "master_msb": "Leer = gespeicherten Schlüssel behalten.",
+          "master_lsb": "Leer = gespeicherten Schlüssel behalten.",
+          "base_serial": "Leer = behalten. Eine neue Seriennummer ist ein neuer Sender: Jeder Motor muss neu angelernt werden.",
+          "counter_start": "Nur zusammen mit einer neuen Seriennummer nötig (1 bei neuer Seriennummer)."
+        }
       }
     },
     "error": {
       "required": "Pflichtfeld (oder config.json einfügen).",
       "invalid_key": "Ungültiger Schlüssel (32 Bit, nicht beide 0).",
       "invalid_serial": "Ungültige Seriennummer (0..0xFFFFF).",
-      "invalid_config_json": "config.json konnte nicht gelesen werden."
+      "invalid_config_json": "config.json konnte nicht gelesen werden.",
+      "counter_required": "Pflicht, wenn sich die Seriennummer ändert."
     },
     "abort": {
       "no_bridge": "Kein ESPHome-Gerät mit der Aktion send_raw gefunden. Erst das jarolift-bridge-Paket flashen und das Gerät in Home Assistant hinzufügen.",
@@ -109,8 +127,10 @@
         },
         "reconfigure": {
           "title": "Kanal bearbeiten",
+          "description": "Wird die Kanalnummer geändert, muss der Motor auf dem neuen Kanal angelernt werden; Gruppen beziehen sich auf Kanalnummern.",
           "data": {
-            "name": "Name"
+            "name": "Name",
+            "channel": "Kanal"
           }
         }
       },

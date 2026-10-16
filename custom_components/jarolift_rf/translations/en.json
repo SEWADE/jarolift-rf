@@ -60,13 +60,31 @@
       "import_summary": {
         "title": "Import from config.json",
         "description": "Channels:\n{channels}\n\nGroups:\n{groups}\n\nRemotes:\n{remotes}\n\nGroups without channels in the old controller (mask 0, they never moved anything). Members suggested from channel names of the form \"GROUP - NAME\"; check and adjust later if needed:\n{derived}"
+      },
+      "reconfigure": {
+        "title": "Change connection and keys",
+        "description": "Current: bridge {bridge}, serial {serial}, next counter {counter}. Keys are not shown. Leave fields empty to keep the stored values.",
+        "data": {
+          "bridge_service": "Radio bridge (ESPHome action)",
+          "master_msb": "Master key MSB",
+          "master_lsb": "Master key LSB",
+          "base_serial": "Base serial number",
+          "counter_start": "Start counter"
+        },
+        "data_description": {
+          "master_msb": "Empty = keep the stored key.",
+          "master_lsb": "Empty = keep the stored key.",
+          "base_serial": "Empty = keep. A new serial is a new sender: every motor must be learned again.",
+          "counter_start": "Only needed together with a new serial (1 for a fresh serial)."
+        }
       }
     },
     "error": {
       "required": "Required (or provide config.json).",
       "invalid_key": "Invalid key (32 bit, not both zero).",
       "invalid_serial": "Invalid serial (0..0xFFFFF).",
-      "invalid_config_json": "config.json could not be read."
+      "invalid_config_json": "config.json could not be read.",
+      "counter_required": "Required when the serial changes."
     },
     "abort": {
       "no_bridge": "No ESPHome device with a send_raw action found. Flash the jarolift-bridge package first and add the device to Home Assistant.",
@@ -109,8 +127,10 @@
         },
         "reconfigure": {
           "title": "Edit channel",
+          "description": "Changing the channel number means the motor must be learned on the new channel; groups refer to channel numbers.",
           "data": {
-            "name": "Name"
+            "name": "Name",
+            "channel": "Channel"
           }
         }
       },

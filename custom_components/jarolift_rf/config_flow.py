@@ -270,6 +270,71 @@ class JaroliftConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Change bridge, keys or serial. Empty secret fields keep the stored value."""
+        entry = self._get_reconfigure_entry()
+        bridges = find_esphome_bridges(self.hass)
+        current_bridge = entry.data[CONF_BRIDGE_SERVICE]
+        if current_bridge not in bridges:
+            bridges = [current_bridge, *bridges]
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            updates: dict[str, Any] = {CONF_BRIDGE_SERVICE: user_input[CONF_BRIDGE_SERVICE]}
+            for key, maximum in (
+                (CONF_MASTER_MSB, 0xFFFFFFFF),
+                (CONF_MASTER_LSB, 0xFFFFFFFF),
+                (CONF_BASE_SERIAL, MAX_BASE_SERIAL),
+            ):
+                raw = (user_input.get(key) or "").strip()
+                if not raw:
+                    continue
+                try:
+                    updates[key] = parse_int(raw, maximum)
+                except ValueError:
+                    errors[key] = "invalid_serial" if key == CONF_BASE_SERIAL else "invalid_key"
+            msb = updates.get(CONF_MASTER_MSB, entry.data[CONF_MASTER_MSB])
+            lsb = updates.get(CONF_MASTER_LSB, entry.data[CONF_MASTER_LSB])
+            if msb == 0 and lsb == 0:
+                errors[CONF_MASTER_MSB] = "invalid_key"
+            serial = updates.get(CONF_BASE_SERIAL, entry.data[CONF_BASE_SERIAL])
+            if serial != entry.data[CONF_BASE_SERIAL]:
+                # New serial = new sender identity with its own counter; motors must be learned again.
+                if not user_input.get(CONF_COUNTER_START):
+                    errors[CONF_COUNTER_START] = "counter_required"
+                updates[CONF_COUNTER_START] = int(user_input.get(CONF_COUNTER_START) or 1)
+            if not errors:
+                await self.async_set_unique_id(serial_unique_id(serial))
+                if serial != entry.data[CONF_BASE_SERIAL]:
+                    self._abort_if_unique_id_configured()
+                return self.async_update_reload_and_abort(
+                    entry, unique_id=serial_unique_id(serial), data_updates=updates
+                )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_BRIDGE_SERVICE, default=current_bridge): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=bridges, mode=selector.SelectSelectorMode.DROPDOWN)
+                ),
+                vol.Optional(CONF_MASTER_MSB): _secret_text(),
+                vol.Optional(CONF_MASTER_LSB): _secret_text(),
+                vol.Optional(CONF_BASE_SERIAL): _secret_text(),
+                vol.Optional(CONF_COUNTER_START): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_COUNTER, max=MAX_COUNTER, step=1, mode=selector.NumberSelectorMode.BOX
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "bridge": current_bridge,
+                "serial": f"0x{entry.data[CONF_BASE_SERIAL]:05X}",
+                "counter": str(entry.runtime_data.counter.next) if hasattr(entry, "runtime_data") else "-",
+            },
+        )
+
     def _create(self) -> ConfigFlowResult:
         return self.async_create_entry(
             title="Jarolift", data=self._data, options=self._options, subentries=self._subentries
@@ -334,10 +399,24 @@ class ChannelSubentryFlow(ConfigSubentryFlow):
         return self.async_show_form(step_id="user", data_schema=schema)
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        entry = self._get_entry()
         subentry = self._get_reconfigure_subentry()
+        current = subentry.data[CONF_CHANNEL]
+        options = [c for c in CHANNEL_OPTIONS if int(c) not in _used_channels(entry, exclude=subentry.subentry_id)]
         if user_input is not None:
-            return self.async_update_and_abort(self._get_entry(), subentry, title=user_input[CONF_NAME].strip())
-        schema = vol.Schema({vol.Required(CONF_NAME, default=subentry.title): selector.TextSelector()})
+            ch = int(user_input[CONF_CHANNEL])
+            return self.async_update_and_abort(
+                entry, subentry, title=user_input[CONF_NAME].strip(),
+                data={CONF_CHANNEL: ch}, unique_id=f"channel_{ch}",
+            )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_NAME, default=subentry.title): selector.TextSelector(),
+                vol.Required(CONF_CHANNEL, default=str(current)): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=options, mode=selector.SelectSelectorMode.DROPDOWN)
+                ),
+            }
+        )
         return self.async_show_form(step_id="reconfigure", data_schema=schema)
 
 

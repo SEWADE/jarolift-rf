@@ -83,3 +83,53 @@ async def test_manual_new_installation(hass: HomeAssistant, bridge) -> None:
     assert 1 <= entry.data[CONF_BASE_SERIAL] <= 0xFFFFF  # generated
     assert entry.options["legacy_learn"] is True
     assert {s.data[CONF_CHANNEL]: s.title for s in entry.subentries.values()} == {1: "Left", 3: "Right"}
+
+
+async def _loaded_entry(hass: HomeAssistant, bridge):
+    result = await _start(hass, "manual")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"bridge_service": BRIDGE, "master_msb": "11", "master_lsb": "22", "base_serial": "0x12345",
+         "counter_start": 300, "channel_names": "Left\nRight"},
+    )
+    await hass.async_block_till_done()
+    return result["result"]
+
+
+async def test_reconfigure_keeps_secrets_when_empty(hass: HomeAssistant, bridge) -> None:
+    entry = await _loaded_entry(hass, bridge)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "reconfigure", "entry_id": entry.entry_id})
+    assert result["description_placeholders"]["serial"] == "0x12345"
+    assert result["description_placeholders"]["counter"] == "300"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"bridge_service": BRIDGE, "master_lsb": "0x99"})
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_MASTER_MSB] == 11 and entry.data[CONF_MASTER_LSB] == 0x99
+    assert entry.data[CONF_BASE_SERIAL] == 0x12345
+
+
+async def test_reconfigure_new_serial_needs_counter(hass: HomeAssistant, bridge) -> None:
+    entry = await _loaded_entry(hass, bridge)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "reconfigure", "entry_id": entry.entry_id})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"bridge_service": BRIDGE, "base_serial": "0x54321"})
+    assert result["errors"] == {"counter_start": "counter_required"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"bridge_service": BRIDGE, "base_serial": "0x54321", "counter_start": 1})
+    assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()
+    assert entry.data[CONF_BASE_SERIAL] == 0x54321
+    assert entry.runtime_data.counter.next == 1
+
+
+async def test_channel_number_can_be_changed(hass: HomeAssistant, bridge) -> None:
+    entry = await _loaded_entry(hass, bridge)
+    sub = next(s for s in entry.subentries.values() if s.title == "Right")
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "channel"), context={"source": "reconfigure", "subentry_id": sub.subentry_id})
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": "Right new", "channel": "5"})
+    assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()
+    assert entry.subentries[sub.subentry_id].data == {"channel": 5}
+    assert entry.subentries[sub.subentry_id].title == "Right new"
