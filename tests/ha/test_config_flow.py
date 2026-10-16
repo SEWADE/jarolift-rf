@@ -104,6 +104,7 @@ async def test_reconfigure_keeps_secrets_when_empty(hass: HomeAssistant, bridge)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"bridge_service": BRIDGE, "master_lsb": "0x99"})
     assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()  # let the scheduled reload finish
     assert entry.data[CONF_MASTER_MSB] == 11 and entry.data[CONF_MASTER_LSB] == 0x99
     assert entry.data[CONF_BASE_SERIAL] == 0x12345
 
