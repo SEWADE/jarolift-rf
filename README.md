@@ -1,3 +1,5 @@
+<img src="docs/logo.svg" alt="" width="96" align="right">
+
 # Jarolift RF für Home Assistant
 
 Steuert Jarolift-Rollladenmotoren (KeeLoq, 433,92 MHz) direkt aus Home Assistant.
